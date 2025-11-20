@@ -1,0 +1,1 @@
+2025-10-14T01:22:40.792787Z arch=efficientnet_b0 epochs=10 bs=32 img=224 best_val_acc=0.9443
