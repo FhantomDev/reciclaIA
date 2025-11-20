@@ -3,7 +3,9 @@ from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from PIL import Image
-import io, json, os
+import io
+import json
+import os
 import torch
 from torchvision import transforms
 
@@ -38,7 +40,7 @@ with open(LABELS_PATH, "r", encoding="utf-8") as f:
 
 IMG_SIZE = 224
 MEAN = [0.485, 0.456, 0.406]  # Imagenet
-STD  = [0.229, 0.224, 0.225]
+STD = [0.229, 0.224, 0.225]
 
 tfm = transforms.Compose([
     transforms.Resize((IMG_SIZE, IMG_SIZE)),
@@ -55,9 +57,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 class Prediction(BaseModel):
     className: str
     probability: float
+
 
 class ClassifyResponse(BaseModel):
     topClass: str
@@ -66,9 +70,11 @@ class ClassifyResponse(BaseModel):
     awarded: bool
     predictions: list[Prediction]
 
+
 @app.get("/health")
 def health():
     return {"status": "ok", "labels": LABELS, "num_classes": len(LABELS)}
+
 
 @app.post("/classify", response_model=ClassifyResponse)
 async def classify(file: UploadFile = File(...)):
@@ -84,7 +90,8 @@ async def classify(file: UploadFile = File(...)):
         probs = torch.softmax(logits, dim=1)[0].tolist()
 
     ranked = sorted(
-        [{"className": LABELS[i], "probability": float(p)} for i, p in enumerate(probs)],
+        [{"className": LABELS[i], "probability": float(
+            p)} for i, p in enumerate(probs)],
         key=lambda r: r["probability"], reverse=True
     )
 
@@ -100,7 +107,14 @@ async def classify(file: UploadFile = File(...)):
     return {
         "topClass": class_name,
         "confidence": round(conf * 100, 1),
-        "score": int(score if awarded else round(score * 0.5)),  # 50% si dudosa
+        # 50% si dudosa
+        "score": int(score if awarded else round(score * 0.5)),
         "awarded": awarded,
         "predictions": ranked[:5],
     }
+
+if __name__ == "__main__":
+    import uvicorn
+    import os
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("app:app", host="0.0.0.0", port=port)
